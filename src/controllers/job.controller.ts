@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
 import { jobs } from '../data/jobs';
+import { candidates, type Candidate } from '../data/candidates';
+import { applications, type Application } from '../data/applications';
 
 export const getJobs = (req: Request, res: Response): void => {
   const page = Math.max(1, parseInt(String(req.query['page'] ?? 1), 10));
@@ -31,8 +33,6 @@ export const getJobById = (req: Request, res: Response): void => {
   res.json(job);
 };
 
-let nextApplicationId = 1;
-
 export const submitApplication = (req: Request, res: Response): void => {
   const jobId = parseInt(String(req.params['jobId'] ?? ''), 10);
   if (isNaN(jobId)) {
@@ -62,12 +62,56 @@ export const submitApplication = (req: Request, res: Response): void => {
     return;
   }
 
-  const application = {
-    id: nextApplicationId++,
-    jobId,
-    status: 'pending' as const,
+  // Always create a new Candidate for each application, rather than matching an
+  // existing one by name — the payload carries no stable identity (email/phone),
+  // so name-matching would risk silently merging unrelated applicants who share a
+  // name. expectedSalary isn't part of the Candidate model, so it's accepted for
+  // validation but not persisted anywhere.
+  const newCandidate: Candidate = {
+    id: candidates.length + 1,
+    name,
+    email: `${name.toLowerCase().replace(/\s+/g, '.')}+${candidates.length + 1}@applicant.example.com`,
+    phone: 'Not provided',
+    position: job.title,
+    status: 'applied',
+    experience,
+    location: job.location,
+    avatarUrl: `https://i.pravatar.cc/150?img=${(candidates.length % 70) + 1}`,
     appliedAt: new Date().toISOString(),
   };
+  candidates.push(newCandidate);
 
-  res.status(201).json(application);
+  const application: Application = {
+    id: applications.length + 1,
+    jobId,
+    candidateId: newCandidate.id,
+    status: 'pending',
+    appliedAt: new Date().toISOString(),
+  };
+  applications.push(application);
+
+  res.status(201).json({
+    id: application.id,
+    jobId: application.jobId,
+    status: application.status,
+    appliedAt: application.appliedAt,
+  });
+};
+
+export const getJobApplicants = (req: Request, res: Response): void => {
+  const jobId = parseInt(String(req.params['id'] ?? ''), 10);
+  if (isNaN(jobId)) {
+    res.status(400).json({ error: 'Invalid job id' });
+    return;
+  }
+  const job = jobs.find((j) => j.id === jobId);
+  if (!job) {
+    res.status(404).json({ error: `Job with id ${jobId} not found` });
+    return;
+  }
+
+  const applicantIds = new Set(applications.filter((a) => a.jobId === jobId).map((a) => a.candidateId));
+  const applicants = candidates.filter((c) => applicantIds.has(c.id));
+
+  res.json({ data: applicants, total: applicants.length });
 };
