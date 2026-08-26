@@ -1,13 +1,9 @@
 import type { Request, Response } from 'express';
-import { candidates, type Candidate } from '../data/candidates';
+import { candidates, VALID_STATUSES, type Candidate } from '../data/candidates';
 import { jobs } from '../data/jobs';
 
-const CANDIDATE_STATUSES: Candidate['status'][] = [
-  'applied', 'screening', 'interview', 'offer', 'hired', 'rejected',
-];
-
 export const getDashboardStats = (_req: Request, res: Response): void => {
-  const candidateStatusCounts = CANDIDATE_STATUSES.reduce((acc, status) => {
+  const candidateStatusCounts = VALID_STATUSES.reduce((acc, status) => {
     acc[status] = 0;
     return acc;
   }, {} as Record<Candidate['status'], number>);

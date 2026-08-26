@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
-import { candidates, type Candidate } from '../data/candidates';
+import { candidates, VALID_STATUSES, type Candidate } from '../data/candidates';
+import { parseIdParam } from '../utils/http';
 
 export const getCandidateById = (req: Request, res: Response): void => {
   const id = parseInt(String(req.params['id'] ?? ''), 10);
@@ -15,10 +16,8 @@ export const getCandidateById = (req: Request, res: Response): void => {
   res.json(candidate);
 };
 
-const VALID_STATUSES: Candidate['status'][] = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
-
 function isValidStatus(value: string): value is Candidate['status'] {
-  return (VALID_STATUSES as string[]).includes(value);
+  return (VALID_STATUSES as readonly string[]).includes(value);
 }
 
 export const getCandidates = (req: Request, res: Response): void => {
@@ -33,18 +32,14 @@ export const getCandidates = (req: Request, res: Response): void => {
   const rawStatus = String(req.query['status'] ?? '');
   const statusFilter = rawStatus ? rawStatus.split(',').filter(isValidStatus) : [];
 
-  let filtered = candidates;
-  if (search) {
-    filtered = filtered.filter(
-      (c) =>
+  const filtered = candidates.filter(
+    (c) =>
+      (!search ||
         c.name.toLowerCase().includes(search) ||
         c.email.toLowerCase().includes(search) ||
-        c.position.toLowerCase().includes(search),
-    );
-  }
-  if (statusFilter.length > 0) {
-    filtered = filtered.filter((c) => statusFilter.includes(c.status));
-  }
+        c.position.toLowerCase().includes(search)) &&
+      (statusFilter.length === 0 || statusFilter.includes(c.status)),
+  );
 
   const start = (page - 1) * limit;
   const data = filtered.slice(start, start + limit);
@@ -62,11 +57,8 @@ export const getCandidates = (req: Request, res: Response): void => {
 // status. The FE only *offers* sensible next stages via its own status
 // control; this endpoint just validates that the target status is a real one.
 export const updateCandidateStatus = (req: Request, res: Response): void => {
-  const id = parseInt(String(req.params['id'] ?? ''), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: 'Invalid candidate id' });
-    return;
-  }
+  const id = parseIdParam(req.params['id'], res, 'candidate');
+  if (id === undefined) return;
 
   const candidate = candidates.find((c) => c.id === id);
   if (!candidate) {
@@ -106,9 +98,10 @@ export const bulkUpdateCandidateStatus = (req: Request, res: Response): void => 
     return;
   }
 
+  const byId = new Map(candidates.map((c) => [c.id, c]));
   const results: BulkStatusResult[] = ids.map((rawId: unknown) => {
     const id = Number(rawId);
-    const candidate = candidates.find((c) => c.id === id);
+    const candidate = byId.get(id);
     if (!candidate) {
       return { id, success: false, error: `Candidate with id ${id} not found` };
     }

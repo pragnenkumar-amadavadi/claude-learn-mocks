@@ -1,10 +1,18 @@
+// Single source of truth for candidate status values — the type is derived
+// from this array so the two can never drift apart. Controllers that need
+// the valid-values list at runtime (validation, aggregation) import this
+// rather than re-declaring their own copy.
+export const VALID_STATUSES = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
+
+export type CandidateStatus = (typeof VALID_STATUSES)[number];
+
 export interface Candidate {
   id: number;
   name: string;
   email: string;
   phone: string;
   position: string;
-  status: 'applied' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
+  status: CandidateStatus;
   experience: number;
   location: string;
   avatarUrl: string;

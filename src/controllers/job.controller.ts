@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { jobs } from '../data/jobs';
 import { candidates, type Candidate } from '../data/candidates';
 import { applications, type Application } from '../data/applications';
+import { parseIdParam } from '../utils/http';
 
 export const getJobs = (req: Request, res: Response): void => {
   const page = Math.max(1, parseInt(String(req.query['page'] ?? 1), 10));
@@ -99,11 +100,9 @@ export const submitApplication = (req: Request, res: Response): void => {
 };
 
 export const getJobApplicants = (req: Request, res: Response): void => {
-  const jobId = parseInt(String(req.params['id'] ?? ''), 10);
-  if (isNaN(jobId)) {
-    res.status(400).json({ error: 'Invalid job id' });
-    return;
-  }
+  const jobId = parseIdParam(req.params['id'], res, 'job');
+  if (jobId === undefined) return;
+
   const job = jobs.find((j) => j.id === jobId);
   if (!job) {
     res.status(404).json({ error: `Job with id ${jobId} not found` });
