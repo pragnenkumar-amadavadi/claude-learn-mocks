@@ -82,6 +82,41 @@ export const updateCandidateStatus = (req: Request, res: Response): void => {
   res.json(candidate);
 };
 
+interface BulkStatusResult {
+  id: number;
+  success: boolean;
+  candidate?: Candidate;
+  error?: string;
+}
+
+// Partial failure is expected (a stale id in the selection, say) so each id
+// gets its own result rather than the whole request succeeding or failing.
+export const bulkUpdateCandidateStatus = (req: Request, res: Response): void => {
+  const { ids, status } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: 'ids must be a non-empty array' });
+    return;
+  }
+
+  if (!isValidStatus(status)) {
+    res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+    return;
+  }
+
+  const results: BulkStatusResult[] = ids.map((rawId: unknown) => {
+    const id = Number(rawId);
+    const candidate = candidates.find((c) => c.id === id);
+    if (!candidate) {
+      return { id, success: false, error: `Candidate with id ${id} not found` };
+    }
+    candidate.status = status;
+    return { id, success: true, candidate };
+  });
+
+  res.json({ results });
+};
+
 export const saveCandidate = (req: Request, res: Response): void => {
   const { name, email, phone, position, status, experience, location, avatarUrl } = req.body;
 

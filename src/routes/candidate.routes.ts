@@ -4,6 +4,7 @@ import {
   getCandidateById,
   saveCandidate,
   updateCandidateStatus,
+  bulkUpdateCandidateStatus,
 } from '../controllers/candidate.controller';
 
 const router = Router();
@@ -11,6 +12,7 @@ const router = Router();
 router.get('/', getCandidates);
 router.get('/:id', getCandidateById);
 router.post('/', saveCandidate);
+router.patch('/bulk-status', bulkUpdateCandidateStatus);
 router.patch('/:id/status', updateCandidateStatus);
 
 export default router;
