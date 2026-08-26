@@ -3,6 +3,7 @@ import userRoutes from './routes/user.routes';
 import candidateRoutes from './routes/candidate.routes';
 import jobRoutes from './routes/job.routes';
 import noteRoutes from './routes/note.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 const app = express();
 const PORT = 8080;
@@ -17,6 +18,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/candidates/:id/notes', noteRoutes);
 app.use('/api/jobs', jobRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
