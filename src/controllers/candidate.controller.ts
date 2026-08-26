@@ -56,6 +56,32 @@ export const getCandidates = (req: Request, res: Response): void => {
   });
 };
 
+// No transition graph is enforced here — any candidate can move to any valid
+// status. The FE only *offers* sensible next stages via its own status
+// control; this endpoint just validates that the target status is a real one.
+export const updateCandidateStatus = (req: Request, res: Response): void => {
+  const id = parseInt(String(req.params['id'] ?? ''), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: 'Invalid candidate id' });
+    return;
+  }
+
+  const candidate = candidates.find((c) => c.id === id);
+  if (!candidate) {
+    res.status(404).json({ error: `Candidate with id ${id} not found` });
+    return;
+  }
+
+  const { status } = req.body;
+  if (!isValidStatus(status)) {
+    res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+    return;
+  }
+
+  candidate.status = status;
+  res.json(candidate);
+};
+
 export const saveCandidate = (req: Request, res: Response): void => {
   const { name, email, phone, position, status, experience, location, avatarUrl } = req.body;
 
