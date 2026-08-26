@@ -26,10 +26,12 @@ export const getCandidates = (req: Request, res: Response): void => {
   const limit = Math.min(50, Math.max(1, parseInt(String(req.query['limit'] ?? 10), 10)));
 
   const search = String(req.query['search'] ?? '').trim().toLowerCase();
-  const rawStatus = req.query['status'];
-  const statusFilter = (Array.isArray(rawStatus) ? rawStatus : rawStatus ? [rawStatus] : [])
-    .map((s) => String(s))
-    .filter(isValidStatus);
+  // Comma-separated, not repeated/bracket query params — Express's default
+  // "simple" query parser (Node's querystring) doesn't parse `status[]=` or
+  // array-style params into an array, so a single delimited value is what
+  // actually survives parsing.
+  const rawStatus = String(req.query['status'] ?? '');
+  const statusFilter = rawStatus ? rawStatus.split(',').filter(isValidStatus) : [];
 
   let filtered = candidates;
   if (search) {
