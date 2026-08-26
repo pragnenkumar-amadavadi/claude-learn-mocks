@@ -15,23 +15,46 @@ export const getCandidateById = (req: Request, res: Response): void => {
   res.json(candidate);
 };
 
+const VALID_STATUSES: Candidate['status'][] = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
+
+function isValidStatus(value: string): value is Candidate['status'] {
+  return (VALID_STATUSES as string[]).includes(value);
+}
+
 export const getCandidates = (req: Request, res: Response): void => {
   const page = Math.max(1, parseInt(String(req.query['page'] ?? 1), 10));
   const limit = Math.min(50, Math.max(1, parseInt(String(req.query['limit'] ?? 10), 10)));
 
+  const search = String(req.query['search'] ?? '').trim().toLowerCase();
+  const rawStatus = req.query['status'];
+  const statusFilter = (Array.isArray(rawStatus) ? rawStatus : rawStatus ? [rawStatus] : [])
+    .map((s) => String(s))
+    .filter(isValidStatus);
+
+  let filtered = candidates;
+  if (search) {
+    filtered = filtered.filter(
+      (c) =>
+        c.name.toLowerCase().includes(search) ||
+        c.email.toLowerCase().includes(search) ||
+        c.position.toLowerCase().includes(search),
+    );
+  }
+  if (statusFilter.length > 0) {
+    filtered = filtered.filter((c) => statusFilter.includes(c.status));
+  }
+
   const start = (page - 1) * limit;
-  const data = candidates.slice(start, start + limit);
+  const data = filtered.slice(start, start + limit);
 
   res.json({
     data,
-    total: candidates.length,
+    total: filtered.length,
     page,
     limit,
-    hasMore: start + limit < candidates.length,
+    hasMore: start + limit < filtered.length,
   });
 };
-
-const VALID_STATUSES: Candidate['status'][] = ['applied', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 
 export const saveCandidate = (req: Request, res: Response): void => {
   const { name, email, phone, position, status, experience, location, avatarUrl } = req.body;
