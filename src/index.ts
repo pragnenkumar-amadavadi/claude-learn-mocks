@@ -3,6 +3,7 @@ import userRoutes from './routes/user.routes';
 import candidateRoutes from './routes/candidate.routes';
 import jobRoutes from './routes/job.routes';
 import noteRoutes from './routes/note.routes';
+import statusHistoryRoutes from './routes/statusHistory.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 
 const app = express();
@@ -17,6 +18,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/candidates/:id/notes', noteRoutes);
+app.use('/api/candidates/:id/status-history', statusHistoryRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 

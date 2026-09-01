@@ -1,6 +1,20 @@
 import type { Request, Response } from 'express';
 import { candidates, VALID_STATUSES, type Candidate } from '../data/candidates';
+import { statusHistory } from '../data/statusHistory';
 import { parseIdParam } from '../utils/http';
+
+// Shared by updateCandidateStatus and bulkUpdateCandidateStatus — only a real
+// transition is worth a history entry, not a no-op "update" to the same status.
+function recordStatusChange(candidate: Candidate, toStatus: Candidate['status']): void {
+  if (candidate.status === toStatus) return;
+  statusHistory.push({
+    id: statusHistory.length + 1,
+    candidateId: candidate.id,
+    fromStatus: candidate.status,
+    toStatus,
+    changedAt: new Date().toISOString(),
+  });
+}
 
 export const getCandidateById = (req: Request, res: Response): void => {
   const id = parseInt(String(req.params['id'] ?? ''), 10);
@@ -72,6 +86,7 @@ export const updateCandidateStatus = (req: Request, res: Response): void => {
     return;
   }
 
+  recordStatusChange(candidate, status);
   candidate.status = status;
   res.json(candidate);
 };
@@ -105,6 +120,7 @@ export const bulkUpdateCandidateStatus = (req: Request, res: Response): void => 
     if (!candidate) {
       return { id, success: false, error: `Candidate with id ${id} not found` };
     }
+    recordStatusChange(candidate, status);
     candidate.status = status;
     return { id, success: true, candidate };
   });
